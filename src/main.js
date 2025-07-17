@@ -2,7 +2,14 @@ import iziToast from "izitoast";
 import "izitoast/dist/css/iziToast.min.css";
 
 import { getImagesByQuery } from "./js/pixabay-api";
-import { createGallery, clearGallery, showLoader, hideLoader, showLoadMoreButton, hideLoadMoreButton } from "./js/render-functions";
+import {
+    createGallery,
+    clearGallery,
+    showLoader,
+    hideLoader,
+    showLoadMoreButton,
+    hideLoadMoreButton
+} from "./js/render-functions";
 
 const form = document.querySelector(".form");
 const input = form.querySelector("input[name='search-text']");
@@ -10,19 +17,14 @@ const btnLoad = document.querySelector("[type='button']");
 
 form.addEventListener("submit", handleSubmit);
 
-let searchText = ""
+let searchText = "";
 let page = 1;
-let limit = 0;
-let totalHits = 0;
+const limit = 15;
 let totalPage = 0;
-
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 async function handleSubmit(ev) {
     ev.preventDefault();
-    hideLoadMoreButton()
+    hideLoadMoreButton();
     clearGallery();
     page = 1;
 
@@ -35,71 +37,78 @@ async function handleSubmit(ev) {
             position: "topRight"
         });
         return;
-    }
+    };
 
-    showLoader()
+    showLoader();
 
     try {
-        await delay(1500);
-
         const posts = await getImagesByQuery(inputText, page)
-        totalHits = posts.totalHits;
-        limit = posts.hits.length;
+        const totalHits = posts.totalHits;
 
-        if (limit === 0) {
-            return iziToast.error({
+        if (posts.hits.length === 0) {
+            iziToast.error({
                 title: `Sorry, there are no images matching your search ${inputText}. Please try again!`,
                 position: "topRight"
-            })
-        }
+            });
+            return;
+        };
 
         createGallery(posts);
 
         totalPage = Math.ceil(totalHits / limit);
 
-        if (totalHits > limit) {
-            showLoadMoreButton();
-        } else {
+        if (page >= totalPage) {
             iziToast.info({
                 title: `We're sorry, but you've reached the end of search results.`,
                 position: "topRight"
             });
+        } else {
+            showLoadMoreButton();
         }
+
+        form.reset();
+
     } catch (error) {
         iziToast.error({
             title: error.message,
         });
     }
     finally {
-        hideLoader()
+        hideLoader();
     }
+};
 
-    form.reset();
-}
-
-btnLoad.addEventListener("click", handleLoad)
+btnLoad.addEventListener("click", handleLoad);
 
 async function handleLoad(ev) {
     page++
 
-    hideLoadMoreButton()
-    showLoader()
+    hideLoadMoreButton();
+    showLoader();
 
     try {
-        await delay(1500);
         const posts = await getImagesByQuery(searchText, page);
-        createGallery(posts);
 
-        if (page < totalPage) {
-            showLoadMoreButton()
-        } else {
+        if (posts.hits.length === 0) {
             iziToast.info({
                 title: `We're sorry, but you've reached the end of search results.`,
                 position: "topRight"
             });
+            return;
+        };
+
+        if (page >= totalPage) {
+            iziToast.info({
+                title: `We're sorry, but you've reached the end of search results.`,
+                position: "topRight"
+            });
+        } else {
+            showLoadMoreButton();
         }
 
-        const card = document.querySelector(".gallery-item");
+        createGallery(posts);
+
+        let card = document.querySelector(".gallery-item");
         if (card) {
             const cardHeight = card.getBoundingClientRect().height;
             window.scrollBy({
@@ -114,7 +123,7 @@ async function handleLoad(ev) {
         });
     }
     finally {
-        hideLoader()
+        hideLoader();
     }
-}
+};
 
